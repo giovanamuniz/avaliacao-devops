@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Produtos cadastrados</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 860px; margin: 40px auto; padding: 0 16px; color: #222; }
+    h1 { font-size: 1.6rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background: #f2f2f2; }
+    #mensagem { margin-top: 16px; font-weight: bold; }
+    .erro { color: #b00020; }
+    a { display: inline-block; margin-top: 24px; }
+  </style>
+  <script src="config.js"></script>
+</head>
+<body>
+  <h1>Produtos cadastrados</h1>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Nome</th>
+        <th>Categoria</th>
+        <th>Preço</th>
+        <th>Estoque</th>
+        <th>Cadastrado em</th>
+      </tr>
+    </thead>
+    <tbody id="corpo-tabela"></tbody>
+  </table>
+
+  <p id="mensagem"></p>
+
+  <a href="index.html">Voltar ao cadastro</a>
+
+  <script>
+    const corpo = document.getElementById("corpo-tabela");
+    const mensagem = document.getElementById("mensagem");
+
+    function celula(texto) {
+      const td = document.createElement("td");
+      td.textContent = texto; // textContent evita injeção de HTML
+      return td;
+    }
+
+    async function carregarProdutos() {
+      try {
+        // Requisição HTTP para a API da VM2
+        const resposta = await fetch(`${window.API_URL}/produtos`);
+        if (!resposta.ok) {
+          throw new Error(`HTTP ${resposta.status}`);
+        }
+        const produtos = await resposta.json();
+
+        if (produtos.length === 0) {
+          mensagem.textContent = "Nenhum produto cadastrado.";
+          return;
+        }
+
+        for (const p of produtos) {
+          const tr = document.createElement("tr");
+          tr.append(
+            celula(p.id),
+            celula(p.nome),
+            celula(p.categoria),
+            celula(Number(p.preco).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })),
+            celula(p.quantidade),
+            celula(new Date(p.criado_em).toLocaleString("pt-BR"))
+          );
+          corpo.appendChild(tr);
+        }
+      } catch (erro) {
+        mensagem.textContent = `Erro ao listar: ${erro.message}`;
+        mensagem.className = "erro";
+      }
+    }
+
+    carregarProdutos();
+  </script>
+</body>
+</html>

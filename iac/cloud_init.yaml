@@ -1,0 +1,31 @@
+#cloud-config
+hostname: ${hostname}
+manage_etc_hosts: true
+
+users:
+  - default
+  - name: aluno
+    gecos: Avaliacao DevOps
+    groups: [adm, sudo]
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: true
+    ssh_authorized_keys:
+      - ${ssh_key}
+
+ssh_pwauth: false
+disable_root: true
+
+# Prepara a VM para usar Docker
+package_update: true
+packages:
+  - docker.io
+  - docker-compose-v2
+  - python3
+
+runcmd:
+  - systemctl enable --now docker
+  - usermod -aG docker aluno
+  - echo "cloud-init concluido em $(date -Iseconds)" > /var/log/cloud-init-avaliacao.log
+
+final_message: "VM pronta apos $UPTIME segundos"

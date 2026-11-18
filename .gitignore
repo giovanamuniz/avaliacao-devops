@@ -1,0 +1,12 @@
+# OpenTofu: estado local e cache de providers não vão para o Git
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+
+# Node
+node_modules/
+npm-debug.log
+
+# Segredos
+.env

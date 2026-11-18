@@ -1,0 +1,142 @@
+---
+# Play 1: API Node.js + MySQL na VM2
+- name: Implantar a API e o MySQL na VM2
+  hosts: api
+  become: true
+
+  vars:
+    dir_api: /opt/api
+    db_name: loja
+    db_user: app
+    db_password: SenhaApp2026
+    db_root_password: SenhaRoot2026
+    origem_web: "http://{{ hostvars['vm1']['ansible_host'] }}"
+
+  tasks:
+    - name: Aguardar o cloud-init terminar (instalação do Docker)
+      ansible.builtin.command: cloud-init status --wait
+      register: status_cloudinit
+      changed_when: false
+      failed_when: status_cloudinit.rc not in [0, 2]
+
+    - name: Garantir que o Docker está ativo e inicia com a VM
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Criar o diretório da API
+      ansible.builtin.file:
+        path: "{{ dir_api }}"
+        state: directory
+        mode: "0755"
+
+    - name: Copiar os arquivos da API
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../api/{{ item }}"
+        dest: "{{ dir_api }}/{{ item }}"
+        mode: "0644"
+      loop:
+        - Dockerfile
+        - .dockerignore
+        - docker-compose.yml
+        - package.json
+        - server.js
+
+    - name: Gerar o .env com as credenciais do banco e a origem liberada no CORS
+      ansible.builtin.copy:
+        dest: "{{ dir_api }}/.env"
+        mode: "0600"
+        content: |
+          DB_NAME={{ db_name }}
+          DB_USER={{ db_user }}
+          DB_PASSWORD={{ db_password }}
+          DB_ROOT_PASSWORD={{ db_root_password }}
+          CORS_ORIGIN={{ origem_web }}
+
+    - name: Construir a imagem da API e subir a API e o MySQL
+      ansible.builtin.command: docker compose up -d --build
+      args:
+        chdir: "{{ dir_api }}"
+      register: compose_api
+      changed_when: "'Started' in compose_api.stderr or 'Recreated' in compose_api.stderr"
+
+    - name: Aguardar a API responder
+      ansible.builtin.uri:
+        url: http://localhost:3000/
+      register: saude_api
+      until: saude_api.status == 200
+      retries: 40
+      delay: 5
+
+# Play 2: aplicação web (Nginx + HTML) na VM1
+- name: Implantar a aplicação web na VM1
+  hosts: web
+  become: true
+
+  vars:
+    dir_app: /opt/app
+    api_url: "http://{{ hostvars['vm2']['ansible_host'] }}:3000"
+
+  tasks:
+    - name: Aguardar o cloud-init terminar (instalação do Docker)
+      ansible.builtin.command: cloud-init status --wait
+      register: status_cloudinit
+      changed_when: false
+      failed_when: status_cloudinit.rc not in [0, 2]
+
+    - name: Garantir que o Docker está ativo e inicia com a VM
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Criar o diretório da aplicação
+      ansible.builtin.file:
+        path: "{{ dir_app }}"
+        state: directory
+        mode: "0755"
+
+    - name: Copiar os arquivos da aplicação web
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../app/{{ item }}"
+        dest: "{{ dir_app }}/{{ item }}"
+        mode: "0644"
+      loop:
+        - Dockerfile
+        - index.html
+        - listar.html
+      register: arquivos_web
+
+    - name: Gerar o config.js com o endereço da API na VM2
+      ansible.builtin.copy:
+        dest: "{{ dir_app }}/config.js"
+        content: "window.API_URL = \"{{ api_url }}\";\n"
+        mode: "0644"
+      register: config_web
+
+    - name: Verificar se o contêiner web já está rodando
+      ansible.builtin.command: docker ps -q --filter name=^web-produtos$
+      register: web_rodando
+      changed_when: false
+
+    - name: Construir a imagem e (re)criar o contêiner web
+      when: arquivos_web.changed or config_web.changed or web_rodando.stdout == ""
+      block:
+        - name: Construir a imagem web-produtos
+          ansible.builtin.command: docker build -t web-produtos .
+          args:
+            chdir: "{{ dir_app }}"
+
+        - name: Remover o contêiner antigo, se existir
+          ansible.builtin.command: docker rm -f web-produtos
+          failed_when: false
+
+        - name: Subir o contêiner web na porta 80
+          ansible.builtin.command: docker run -d --name web-produtos --restart unless-stopped -p 80:80 web-produtos
+
+    - name: Mostrar os endereços de acesso
+      ansible.builtin.debug:
+        msg:
+          - "Aplicação web: http://{{ ansible_host }}"
+          - "API: {{ api_url }}/produtos"

@@ -1,0 +1,6 @@
+# Gerado pelo OpenTofu: cd iac && tofu output -raw inventario > ../ansible/inventory
+[web]
+vm1 ansible_host=IP_DA_VM1
+
+[api]
+vm2 ansible_host=IP_DA_VM2
