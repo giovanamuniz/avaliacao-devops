@@ -10,7 +10,7 @@ Aplicação distribuída em duas máquinas virtuais, com infraestrutura automati
 
 ## Endereço de acesso
 
-- **Aplicação web (VM1):** http://IP_DA_VM1
+- **Aplicação web (VM1):** http://192.168.122.248
 - **API REST (VM2):** http://IP_DA_VM2:3000/produtos
 
 Os IPs são atribuídos pelo DHCP da rede `default` do libvirt e aparecem em `tofu output ips`.
@@ -32,7 +32,7 @@ O navegador carrega as páginas da VM1, e o JavaScript delas faz requisições H
 
 ### CORS
 
-A página da VM1 e a API da VM2 têm origens diferentes, então o navegador exige CORS. A API responde com `Access-Control-Allow-Origin` apenas para a origem da aplicação web (`http://IP_DA_VM1`, definida pelo Ansible na variável `CORS_ORIGIN`), libera os métodos `GET`, `POST` e `OPTIONS` e o cabeçalho `Content-Type`, e responde às requisições `OPTIONS` (preflight) com `204`.
+A página da VM1 e a API da VM2 têm origens diferentes, então o navegador exige CORS. A API responde com `Access-Control-Allow-Origin` apenas para a origem da aplicação web (`http://192.168.122.248`, definida pelo Ansible na variável `CORS_ORIGIN`), libera os métodos `GET`, `POST` e `OPTIONS` e o cabeçalho `Content-Type`, e responde às requisições `OPTIONS` (preflight) com `204`.
 
 ## Estrutura
 
