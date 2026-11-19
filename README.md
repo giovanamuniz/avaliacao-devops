@@ -11,7 +11,7 @@ Aplicação distribuída em duas máquinas virtuais, com infraestrutura automati
 ## Endereço de acesso
 
 - **Aplicação web (VM1):** http://192.168.122.248
-- **API REST (VM2):** http://IP_DA_VM2:3000/produtos
+- **API REST (VM2):** http://192.168.122.86:3000/produtos
 
 Os IPs são atribuídos pelo DHCP da rede `default` do libvirt e aparecem em `tofu output ips`.
 
